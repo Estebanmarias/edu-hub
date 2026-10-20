@@ -1,1 +1,100 @@
 @import "tailwindcss";
+
+/* ---------- Edu Hub theme: colours taken from the bird mascot ---------- */
+@theme {
+  --color-brand-50: #eef8fd;
+  --color-brand-100: #d9eefa;
+  --color-brand-200: #b3dff4;
+  --color-brand-300: #7cc8ea;
+  --color-brand-400: #4db1de;
+  --color-brand-500: #2a98cc;
+  --color-brand-600: #1f7baa;
+  --color-brand-700: #1b6388;
+  --color-brand-800: #1a526f;
+  --color-brand-900: #184559;
+  --color-sun-300: #f9e68f;
+  --color-sun-400: #f7dd6e;
+  --color-sun-500: #f2c94c;
+  --color-berry-500: #e0283f;
+  --color-berry-600: #c01e34;
+  --color-ink: #14303f;
+  --color-mist: #f3fafd;
+  --font-sans: ui-rounded, "Nunito", "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* ---------- mascot animation ---------- */
+.mascot { overflow: visible; }
+.mascot .m-part { transform-box: fill-box; }
+.mascot[data-animate="true"] .m-body { animation: mascot-bob 3.2s ease-in-out infinite; transform-origin: 50% 100%; }
+.mascot[data-animate="true"] .m-eyes { animation: mascot-blink 4.5s infinite; transform-origin: 50% 50%; }
+.mascot[data-animate="true"] .m-crest { animation: mascot-sway 3.6s ease-in-out infinite; transform-origin: 20% 100%; }
+.mascot[data-animate="true"] .m-wing-l { transform-origin: 85% 70%; }
+.mascot[data-animate="true"] .m-wing-r { transform-origin: 15% 70%; }
+.mascot[data-mood="happy"][data-animate="true"] .m-wing-l,
+.mascot[data-mood="celebrate"][data-animate="true"] .m-wing-l { animation: mascot-flap-l .55s ease-in-out infinite; }
+.mascot[data-mood="happy"][data-animate="true"] .m-wing-r,
+.mascot[data-mood="celebrate"][data-animate="true"] .m-wing-r { animation: mascot-flap-r .55s ease-in-out infinite; }
+.mascot[data-mood="celebrate"][data-animate="true"] .m-body { animation: mascot-jump .9s ease-in-out infinite; }
+.mascot[data-mood="sad"] .m-wing-l { transform: rotate(18deg); transform-origin: 85% 70%; }
+.mascot[data-mood="sad"] .m-wing-r { transform: rotate(-18deg); transform-origin: 15% 70%; }
+.mascot[data-mood="thinking"] .m-head { transform: rotate(-6deg); transform-origin: 50% 90%; }
+.mascot[data-wiggle="true"] .m-body { animation: mascot-wiggle .5s ease-in-out 1 !important; }
+.mascot .m-confetti { animation: mascot-confetti 1.2s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+.mascot .m-zzz { animation: mascot-zzz 2.4s ease-in-out infinite; }
+
+@keyframes mascot-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes mascot-blink { 0%, 92%, 100% { transform: scaleY(1); } 96% { transform: scaleY(0.08); } }
+@keyframes mascot-sway { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(5deg); } }
+@keyframes mascot-flap-l { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-30deg); } }
+@keyframes mascot-flap-r { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(30deg); } }
+@keyframes mascot-jump { 0%, 100% { transform: translateY(0); } 45%, 55% { transform: translateY(-20px); } }
+@keyframes mascot-wiggle { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(-9deg); } 75% { transform: rotate(9deg); } }
+@keyframes mascot-confetti { 0% { opacity: 0; transform: translateY(8px) scale(0.6); } 30% { opacity: 1; } 100% { opacity: 0; transform: translateY(-26px) scale(1); } }
+@keyframes mascot-zzz { 0%, 100% { opacity: 0.2; transform: translateY(2px); } 50% { opacity: 1; transform: translateY(-4px); } }
+@keyframes bubble-in { from { opacity: 0; transform: translateY(6px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .mascot *, .mascot { animation: none !important; }
+}
+
+/* ---------- light theme for now (the bird palette is designed on a light background) ---------- */
+:root { color-scheme: light; --background: #f3fafd; --foreground: #14303f; }
+body { background: var(--background); color: var(--foreground); font-family: var(--font-sans); }
+
+/* =====================================================================
+   "Sky School" look: bright sky background, subtle clouds, and 3D buttons
+   ==================================================================== */
+
+body {
+  background:
+    radial-gradient(ellipse 60% 30% at 15% 12%, rgba(255,255,255,.9) 0, rgba(255,255,255,0) 70%),
+    radial-gradient(ellipse 50% 26% at 85% 22%, rgba(255,255,255,.75) 0, rgba(255,255,255,0) 70%),
+    linear-gradient(180deg, #d9eefa 0, #eef8fd 260px, #f3fafd 520px);
+  background-attachment: fixed;
+}
+
+/* Chunky, pressable buttons with a shadow edge that sinks on click */
+button.bg-brand-600, a.bg-brand-600,
+button.bg-brand-500:not([aria-label]), button.bg-sun-400, a.bg-sun-400 {
+  transition: transform .09s ease, box-shadow .09s ease, background-color .15s ease;
+}
+button.bg-brand-600, a.bg-brand-600 { box-shadow: 0 4px 0 var(--color-brand-800); }
+button.bg-sun-400, a.bg-sun-400 { box-shadow: 0 4px 0 #cfa22a; }
+button.bg-brand-600:active:not(:disabled), a.bg-brand-600:active,
+button.bg-sun-400:active:not(:disabled), a.bg-sun-400:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--color-brand-800); }
+button.bg-sun-400:active:not(:disabled), a.bg-sun-400:active { box-shadow: 0 1px 0 #cfa22a; }
+button.bg-brand-600:disabled { box-shadow: 0 4px 0 var(--color-brand-800); }
+
+/* Card hover lift effect */
+a.rounded-2xl, a.rounded-xl { transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease; }
+a.rounded-2xl:hover { transform: translateY(-2px); box-shadow: 0 10px 24px -12px rgba(27,99,136,.35); }
+
+/* Staggered page content entrance animation */
+@keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+.rise-in > * { animation: rise .45s ease-out both; }
+.rise-in > *:nth-child(2) { animation-delay: .06s; }
+.rise-in > *:nth-child(3) { animation-delay: .12s; }
+.rise-in > *:nth-child(4) { animation-delay: .18s; }
+.rise-in > *:nth-child(5) { animation-delay: .24s; }
+.rise-in > *:nth-child(n+6) { animation-delay: .3s; }
+@media (prefers-reduced-motion: reduce) { .rise-in > * { animation: none; } }

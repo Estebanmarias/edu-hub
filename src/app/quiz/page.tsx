@@ -5,6 +5,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { COMPULSORY, ELECTIVE_COUNT, lagosDate, subjectLabel } from "@/lib/quiz/config";
 import { getQuizSettings } from "@/lib/quiz/settings";
 import { currentSession } from "@/lib/quiz/finalize";
+import { subjectEmoji } from "@/lib/quiz/subjects";
+import StudentShell from "@/components/StudentShell";
 import StartForm from "./start-form";
 
 export default async function QuizHome() {
@@ -16,9 +18,9 @@ export default async function QuizHome() {
 
   if (await currentSession(admin, profile.id)) {
     return (
-      <Shell>
+      <Shell name={profile.display_name}>
         <p className="mb-4">You have a quiz in progress.</p>
-        <Link href="/quiz/session" className="rounded-lg bg-blue-600 px-5 py-2.5 font-medium text-white">
+        <Link href="/quiz/session" className="inline-block rounded-xl bg-brand-600 px-5 py-3 font-bold text-white hover:bg-brand-700">
           Continue quiz
         </Link>
       </Shell>
@@ -33,9 +35,9 @@ export default async function QuizHome() {
     .maybeSingle();
   if (today) {
     return (
-      <Shell>
+      <Shell name={profile.display_name}>
         <p className="mb-4">You&apos;ve done today&apos;s quiz. Come back tomorrow.</p>
-        <Link href="/quiz/result" className="rounded-lg bg-blue-600 px-5 py-2.5 font-medium text-white">
+        <Link href="/quiz/result" className="inline-block rounded-xl bg-brand-600 px-5 py-3 font-bold text-white hover:bg-brand-700">
           See my result
         </Link>
       </Shell>
@@ -52,21 +54,21 @@ export default async function QuizHome() {
   const electives = [...ready]
     .filter((s) => !(COMPULSORY as readonly string[]).includes(s))
     .sort()
-    .map((s) => ({ value: s, label: subjectLabel(s) }));
+    .map((s) => ({ value: s, label: subjectLabel(s), emoji: subjectEmoji(s) }));
 
   return (
-    <Shell>
-      <p className="mb-6 text-gray-600">
+    <Shell name={profile.display_name}>
+      <p className="mb-5 text-ink/70">
         {COMPULSORY.map(subjectLabel).join(" and ")} are compulsory, plus {ELECTIVE_COUNT} subjects you choose.{" "}
         {settings.questionsPerSubject} questions each, {settings.durationMinutes} minutes in total. You can only take
         it once a day.
       </p>
       {missing.length > 0 ? (
-        <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
+        <p className="rounded-xl bg-sun-300/50 p-4 text-sm">
           The quiz opens once {missing.map(subjectLabel).join(" and ")} questions are ready.
         </p>
       ) : electives.length < ELECTIVE_COUNT ? (
-        <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">Not enough other subjects are ready yet.</p>
+        <p className="rounded-xl bg-sun-300/50 p-4 text-sm">Not enough other subjects are ready yet.</p>
       ) : (
         <StartForm electives={electives} count={ELECTIVE_COUNT} />
       )}
@@ -74,11 +76,11 @@ export default async function QuizHome() {
   );
 }
 
-function Shell({ children }: { children: React.ReactNode }) {
+function Shell({ name, children }: { name: string; children: React.ReactNode }) {
   return (
-    <main className="mx-auto max-w-xl px-6 py-12">
-      <h1 className="mb-4 text-2xl font-bold">Daily quiz</h1>
-      {children}
-    </main>
+    <StudentShell name={name}>
+      <h1 className="mb-4 text-2xl font-extrabold text-brand-800">Daily quiz</h1>
+      <div className="rounded-2xl border border-brand-200 bg-white p-5 shadow-sm md:p-6">{children}</div>
+    </StudentShell>
   );
 }

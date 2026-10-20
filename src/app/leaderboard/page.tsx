@@ -3,6 +3,8 @@ import { requireProfile } from "@/lib/session";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { lagosDate } from "@/lib/quiz/config";
 import { finalizeOverdue } from "@/lib/quiz/finalize";
+import Mascot from "@/components/mascot/Mascot";
+import StudentShell from "@/components/StudentShell";
 import { allTimeBoard, lagosWeekStart, todayBoard, weekBoard, type BoardRow, type Session } from "@/lib/leaderboard";
 
 type Search = { board?: string; level?: string };
@@ -64,15 +66,21 @@ export default async function LeaderboardPage({ searchParams }: { searchParams: 
     return `/leaderboard?${qs.toString()}`;
   };
 
-  const medal = (i: number) => (i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : String(i + 1));
+  const top = rows.slice(0, 3);
+  const rest = rows.slice(3);
+  const valueOf = (r: BoardRow) => (board === "week" ? `${r.points} pts` : `${r.avgPct}%`);
+  const subOf = (r: BoardRow) =>
+    board === "today" ? fmtTime(r.seconds) : `${r.quizzes} quiz${r.quizzes === 1 ? "" : "zes"}${board === "week" ? ` · ${r.avgPct}% avg` : ""}`;
+  // podium order: 2nd, 1st, 3rd
+  const podium = [top[1], top[0], top[2]].map((r, i) => ({ r, place: [2, 1, 3][i], h: ["h-24", "h-32", "h-20"][i] }));
 
   return (
-    <main className="mx-auto max-w-xl px-6 py-10">
+    <StudentShell name={me.display_name}>
       <div className="mb-1 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Leaderboard</h1>
-        <span className="rounded-full bg-gray-100 px-3 py-1 text-sm">{level}</span>
+        <h1 className="text-2xl font-extrabold text-brand-800">Leaderboard</h1>
+        <span className="rounded-full bg-brand-100 px-3 py-1 text-sm font-bold text-brand-800">{level}</span>
       </div>
-      <p className="mb-5 text-sm text-gray-600">
+      <p className="mb-4 text-sm text-ink/65">
         {board === "today" && "Today's quiz: highest score wins, and a faster finish breaks a tie."}
         {board === "week" && "This week (Monday to Sunday): most points wins, so every quiz counts."}
         {board === "all" && "All time: best average score, once you have taken at least 3 quizzes."}
@@ -83,50 +91,65 @@ export default async function LeaderboardPage({ searchParams }: { searchParams: 
           <Link
             key={b.key}
             href={link({ board: b.key })}
-            className={`rounded-full border px-4 py-1.5 text-sm ${b.key === board ? "border-blue-600 bg-blue-600 text-white" : "border-gray-300"}`}
+            className={`rounded-full border-2 px-4 py-1.5 text-sm font-bold ${b.key === board ? "border-brand-600 bg-brand-600 text-white" : "border-brand-200 bg-white"}`}
           >
             {b.label}
           </Link>
         ))}
         {me.role === "admin" && (
-          <Link href={link({ level: level === "JSS" ? "SS" : "JSS" })} className="ml-auto text-sm text-blue-700 underline">
+          <Link href={link({ level: level === "JSS" ? "SS" : "JSS" })} className="ml-auto text-sm text-brand-700 underline">
             Show {level === "JSS" ? "SS" : "JSS"}
           </Link>
         )}
       </div>
 
       {rows.length === 0 ? (
-        <p className="rounded-lg bg-gray-50 p-4 text-sm text-gray-600">Nobody is on this board yet.</p>
+        <div className="flex flex-col items-center rounded-2xl border border-brand-200 bg-white p-8 text-center shadow-sm">
+          <Mascot mood="sleepy" size={110} />
+          <p className="mt-3 font-semibold">Nobody is on this board yet.</p>
+          <p className="text-sm text-ink/60">Take today&apos;s quiz and be the first!</p>
+        </div>
       ) : (
-        <ol className="space-y-2">
-          {rows.map((r, i) => (
-            <li
-              key={r.userId}
-              className={`flex items-center gap-4 rounded-xl border px-4 py-3 ${r.userId === me.id ? "border-blue-600 bg-blue-50" : "border-gray-200"}`}
-            >
-              <span className="w-8 text-center text-lg">{medal(i)}</span>
-              <span className="flex-1 font-medium">
-                {r.name}
-                {r.userId === me.id && <span className="ml-2 text-xs text-blue-700">you</span>}
-              </span>
-              <span className="text-right">
-                <span className="block font-semibold">{board === "week" ? `${r.points} pts` : `${r.avgPct}%`}</span>
-                <span className="block text-xs text-gray-500">
-                  {board === "today"
-                    ? fmtTime(r.seconds)
-                    : `${r.quizzes} quiz${r.quizzes === 1 ? "" : "zes"}${board === "week" ? ` · ${r.avgPct}% avg` : ""}`}
-                </span>
-              </span>
-            </li>
-          ))}
-        </ol>
-      )}
+        <>
+          <div className="mb-5 flex items-end justify-center gap-3 rounded-3xl bg-linear-to-b from-brand-100 to-white px-3 pt-6">
+            {podium.map(({ r, place, h }) =>
+              r ? (
+                <div key={r.userId} className="flex w-1/3 max-w-[9rem] flex-col items-center text-center">
+                  <div className="mb-1 text-2xl">{place === 1 ? "🥇" : place === 2 ? "🥈" : "🥉"}</div>
+                  <div className={`w-full truncate text-sm font-bold ${r.userId === me.id ? "text-brand-700" : ""}`}>{r.name}</div>
+                  <div className="text-xs text-ink/60">{valueOf(r)}</div>
+                  <div className={`mt-2 w-full rounded-t-xl ${h} ${place === 1 ? "bg-sun-400" : "bg-brand-300"} flex items-start justify-center pt-2 text-lg font-extrabold`}>
+                    {place}
+                  </div>
+                </div>
+              ) : (
+                <div key={place} className="w-1/3 max-w-[9rem]" />
+              ),
+            )}
+          </div>
 
-      <div className="mt-8 text-sm">
-        <Link href="/" className="text-blue-700 underline">
-          Back home
-        </Link>
-      </div>
-    </main>
+          {rest.length > 0 && (
+            <ol className="space-y-2">
+              {rest.map((r, i) => (
+                <li
+                  key={r.userId}
+                  className={`flex items-center gap-4 rounded-xl border-2 px-4 py-3 ${r.userId === me.id ? "border-brand-500 bg-brand-50" : "border-brand-100 bg-white"}`}
+                >
+                  <span className="w-8 text-center font-bold text-ink/60">{i + 4}</span>
+                  <span className="flex-1 font-semibold">
+                    {r.name}
+                    {r.userId === me.id && <span className="ml-2 text-xs font-bold text-brand-700">you</span>}
+                  </span>
+                  <span className="text-right">
+                    <span className="block font-bold">{valueOf(r)}</span>
+                    <span className="block text-xs text-ink/55">{subOf(r)}</span>
+                  </span>
+                </li>
+              ))}
+            </ol>
+          )}
+        </>
+      )}
+    </StudentShell>
   );
 }

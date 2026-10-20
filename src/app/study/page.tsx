@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { requireProfile } from "@/lib/session";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { subjectLabel } from "@/lib/quiz/config";
+import { subjectEmoji } from "@/lib/quiz/subjects";
+import StudentShell from "@/components/StudentShell";
 
 const MIN_QUESTIONS = 5;
 
@@ -17,32 +19,27 @@ export default async function StudyHome() {
     .sort((a, b) => String(a.subject).localeCompare(String(b.subject)));
 
   return (
-    <main className="mx-auto max-w-xl px-6 py-12">
-      <h1 className="mb-1 text-2xl font-bold">Study</h1>
-      <p className="mb-6 text-gray-600">Practise with no timer. You see the answer and the reason after every question.</p>
+    <StudentShell name={profile.display_name}>
+      <h1 className="text-2xl font-extrabold text-brand-800">Study</h1>
+      <p className="mb-5 text-ink/70">Practise with no timer. You see the answer and the reason after every question.</p>
 
       {subjects.length === 0 ? (
-        <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">No subjects are ready yet.</p>
+        <p className="rounded-xl bg-sun-300/50 p-4 text-sm">No subjects are ready yet.</p>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {subjects.map((s) => (
             <Link
               key={s.subject}
               href={`/study/${s.subject}`}
-              className="rounded-xl border border-gray-200 px-4 py-4 hover:border-blue-600"
+              className="flex flex-col items-center rounded-2xl border border-brand-200 bg-white px-3 py-5 text-center shadow-sm transition hover:-translate-y-0.5 hover:border-brand-400 hover:shadow-md"
             >
-              <div className="font-semibold">{subjectLabel(s.subject)}</div>
-              <div className="text-sm text-gray-500">{s.n} questions</div>
+              <span className="text-4xl">{subjectEmoji(s.subject as string)}</span>
+              <span className="mt-2 font-bold">{subjectLabel(s.subject as string)}</span>
+              <span className="text-xs text-ink/55">{s.n} questions</span>
             </Link>
           ))}
         </div>
       )}
-
-      <div className="mt-8 text-sm">
-        <Link href="/" className="text-blue-700 underline">
-          Back home
-        </Link>
-      </div>
-    </main>
+    </StudentShell>
   );
 }

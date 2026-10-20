@@ -3,7 +3,10 @@ import { redirect } from "next/navigation";
 import { requireProfile } from "@/lib/session";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { subjectLabel } from "@/lib/quiz/config";
+import { subjectEmoji } from "@/lib/quiz/subjects";
 import { currentSession } from "@/lib/quiz/finalize";
+import Mascot from "@/components/mascot/Mascot";
+import StudentShell from "@/components/StudentShell";
 
 export default async function ResultPage() {
   const profile = await requireProfile();
@@ -41,39 +44,56 @@ export default async function ResultPage() {
     ? Math.max(1, Math.round((Date.parse(session.finished_at) - Date.parse(session.started_at)) / 60000))
     : null;
 
+  const mood = pct >= 70 ? "celebrate" : pct >= 50 ? "happy" : "thinking";
+  const message =
+    pct >= 85 ? "Outstanding! You really know your stuff." : pct >= 70 ? "Great job! Keep it up." : pct >= 50 ? "Good effort. Practise a little more and you'll climb." : "Every quiz makes you stronger. Try Study mode and come back tomorrow!";
+
   return (
-    <main className="mx-auto max-w-xl px-6 py-12">
-      <h1 className="mb-1 text-2xl font-bold">Your result</h1>
-      <p className="mb-6 text-sm text-gray-600">{session.quiz_date}</p>
-
-      <div className="mb-8 rounded-2xl border border-gray-200 p-6 text-center">
-        <div className="text-5xl font-bold">
-          {score}
-          <span className="text-2xl text-gray-500"> / {total}</span>
+    <StudentShell name={profile.display_name}>
+      <section className="rounded-3xl bg-linear-to-br from-brand-500 to-brand-700 p-6 text-center text-white shadow-lg">
+        <div className="flex justify-center">
+          <Mascot mood={mood} size={130} />
         </div>
-        <div className="mt-1 text-lg text-gray-600">{pct}%</div>
-        {minutes !== null && <div className="mt-2 text-sm text-gray-500">Finished in {minutes} min</div>}
-      </div>
+        <div className="mt-2 text-6xl font-extrabold">
+          {score}
+          <span className="text-2xl font-bold text-brand-100"> / {total}</span>
+        </div>
+        <div className="mt-1 text-xl font-bold text-sun-300">{pct}%</div>
+        <p className="mx-auto mt-3 max-w-sm text-brand-50">{message}</p>
+        {minutes !== null && <p className="mt-2 text-sm text-brand-100">Finished in {minutes} min</p>}
+      </section>
 
-      <ul className="mb-8 space-y-2">
-        {[...bySubject.entries()].map(([subject, s]) => (
-          <li key={subject} className="flex justify-between rounded-lg border border-gray-200 px-4 py-2">
-            <span>{subjectLabel(subject)}</span>
-            <span className="font-medium">
-              {s.correct} / {s.total}
-            </span>
-          </li>
-        ))}
+      <h2 className="mb-3 mt-6 font-bold">By subject</h2>
+      <ul className="space-y-3">
+        {[...bySubject.entries()].map(([subject, s]) => {
+          const p = s.total ? Math.round((s.correct / s.total) * 100) : 0;
+          return (
+            <li key={subject} className="rounded-2xl border border-brand-200 bg-white p-4 shadow-sm">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="font-semibold">
+                  <span className="mr-2">{subjectEmoji(subject)}</span>
+                  {subjectLabel(subject)}
+                </span>
+                <span className="font-bold">
+                  {s.correct} / {s.total}
+                </span>
+              </div>
+              <div className="h-2.5 overflow-hidden rounded-full bg-brand-100">
+                <div className="h-full rounded-full bg-brand-500" style={{ width: `${p}%` }} />
+              </div>
+            </li>
+          );
+        })}
       </ul>
 
-      <div className="flex gap-6">
-        <Link href="/leaderboard" className="font-medium text-blue-700 underline">
+      <div className="mt-6 flex flex-wrap gap-3">
+        <Link href="/leaderboard" className="rounded-xl bg-brand-600 px-5 py-3 font-bold text-white hover:bg-brand-700">
           See the leaderboard
         </Link>
-        <Link href="/" className="text-blue-700 underline">
-          Back home
+        <Link href="/study" className="rounded-xl border-2 border-brand-200 bg-white px-5 py-3 font-bold">
+          Practise in Study mode
         </Link>
       </div>
-    </main>
+    </StudentShell>
   );
 }

@@ -1,54 +1,52 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { assertAdmin } from "@/lib/session";
 
-const STATUSES = ["verified", "approved", "rejected"] as const;
-
+/** Change question status (approve, reject, verified). */
 export async function setStatus(formData: FormData): Promise<void> {
   await assertAdmin();
   const id = String(formData.get("id") ?? "");
   const status = String(formData.get("status") ?? "");
-  if (!id || !(STATUSES as readonly string[]).includes(status)) throw new Error("Bad request.");
+  if (!id || !status) throw new Error("Bad request.");
 
-  const supabase = await createClient();
-  const { error } = await supabase.from("questions").update({ status }).eq("id", id);
+  const admin = createAdminClient();
+  const { error } = await admin.from("questions").update({ status }).eq("id", id);
   if (error) throw new Error(error.message);
   revalidatePath("/admin/review");
 }
 
-/** Save edits to the wording, difficulty and answer key. The "approve" button saves and approves in one go. */
+/** Save edits to a question (stem, explanation, difficulty, correct option). */
 export async function saveEdits(formData: FormData): Promise<void> {
   await assertAdmin();
   const id = String(formData.get("id") ?? "");
   const stem = String(formData.get("stem") ?? "").trim();
   const explanation = String(formData.get("explanation") ?? "").trim();
-  const difficulty = Number(formData.get("difficulty"));
+  const difficulty = Number(formData.get("difficulty") ?? 2);
   const correct = String(formData.get("correct") ?? "");
   const intent = String(formData.get("intent") ?? "save");
 
-  if (!id) throw new Error("Bad request.");
-  if (stem.length < 10) throw new Error("The question text is too short.");
-  if (![1, 2, 3].includes(difficulty)) throw new Error("Difficulty must be 1, 2 or 3.");
+  if (!id || !stem || !correct) throw new Error("Bad request.");
 
-  const supabase = await createClient();
-  const { data: q, error: readError } = await supabase.from("questions").select("options").eq("id", id).single();
-  if (readError || !q) throw new Error("Question not found.");
-  const ids = (q.options as { id: string }[]).map((o) => o.id);
-  if (!ids.includes(correct)) throw new Error("The answer key must be one of the options.");
+  const admin = createAdminClient();
+  
+  const updateData: Record<string, any> = { stem, explanation, difficulty };
+  if (intent === "approve") {
+    updateData.status = "approved";
+  }
 
-  const update: Record<string, unknown> = { stem, explanation: explanation || null, difficulty };
-  if (intent === "approve") update.status = "approved";
+  const { error: qErr } = await admin.from("questions").update(updateData).eq("id", id);
+  if (qErr) throw new Error(qErr.message);
 
-  const { error: qError } = await supabase.from("questions").update(update).eq("id", id);
-  if (qError) throw new Error(qError.message);
-  const { error: aError } = await supabase.from("question_answers").update({ correct_option: correct }).eq("question_id", id);
-  if (aError) throw new Error(aError.message);
+  const { error: aErr } = await admin
+    .from("question_answers")
+    .update({ correct_option: correct })
+    .eq("question_id", id);
+  if (aErr) throw new Error(aErr.message);
 
   revalidatePath("/admin/review");
 }
-
 
 /** Approve every waiting question for one subject and level. Use it after reviewing a random sample. */
 export async function approveAll(formData: FormData): Promise<void> {
@@ -57,8 +55,8 @@ export async function approveAll(formData: FormData): Promise<void> {
   const level = String(formData.get("level") ?? "");
   if (!subject || (level !== "JSS" && level !== "SS")) throw new Error("Pick a subject and a level first.");
 
-  const supabase = await createClient();
-  const { error } = await supabase
+  const admin = createAdminClient();
+  const { error } = await admin
     .from("questions")
     .update({ status: "approved" })
     .eq("status", "verified")

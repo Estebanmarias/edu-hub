@@ -2,8 +2,8 @@ import { redirect } from "next/navigation";
 import { requireProfile } from "@/lib/session";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { subjectLabel } from "@/lib/quiz/config";
-import { currentSession, finalizeSession } from "@/lib/quiz/finalize";
-import Runner from "./runner";
+import { currentSession } from "@/lib/quiz/finalize";
+import Runner, { type Item } from "./runner";
 
 export default async function SessionPage() {
   const profile = await requireProfile();
@@ -13,49 +13,48 @@ export default async function SessionPage() {
   const session = await currentSession(admin, profile.id);
   if (!session) redirect("/quiz");
 
-  const { count: total } = await admin
-    .from("session_questions")
-    .select("id", { count: "exact", head: true })
-    .eq("session_id", session.id);
-
   const { data: rows } = await admin
     .from("session_questions")
-    .select("id, position, subject, question_id, option_order, served_at")
+    .select("id, position, subject, question_id, option_order, chosen_option")
     .eq("session_id", session.id)
-    .is("answered_at", null)
-    .order("position")
-    .limit(1);
-  const row = rows?.[0];
-  if (!row) {
-    // every question answered
-    await finalizeSession(admin, session.id, session.deadline);
-    redirect("/quiz/result");
-  }
+    .order("position");
+  if (!rows?.length) redirect("/quiz");
 
-  // The clock for this question starts the first time it is shown, and a refresh does not restart it
-  let servedAt = row.served_at as string | null;
-  if (!servedAt) {
-    servedAt = new Date().toISOString();
-    await admin.from("session_questions").update({ served_at: servedAt }).eq("id", row.id).is("served_at", null);
-  }
+  const { data: qs } = await admin
+    .from("questions")
+    .select("id, stem, options")
+    .in("id", rows.map((r) => r.question_id));
+  const byId = new Map((qs ?? []).map((q) => [q.id as string, q]));
 
-  const { data: q } = await admin.from("questions").select("stem, options").eq("id", row.question_id).single();
-  if (!q) redirect("/quiz");
-  const byId = new Map((q.options as { id: string; text: string }[]).map((o) => [o.id, o.text]));
-  const options = (row.option_order as string[]).map((id) => ({ id, text: byId.get(id) ?? "" }));
+  // numbered within each subject, in the order the subjects were chosen (JAMB style)
+  const order = session.subjects?.length ? session.subjects : [...new Set(rows.map((r) => r.subject as string))];
+  const counters = new Map<string, number>();
+  const items: Item[] = [];
+  for (const subject of order) {
+    for (const r of rows.filter((x) => x.subject === subject)) {
+      const q = byId.get(r.question_id);
+      if (!q) continue;
+      const texts = new Map((q.options as { id: string; text: string }[]).map((o) => [o.id, o.text]));
+      const n = (counters.get(subject) ?? 0) + 1;
+      counters.set(subject, n);
+      items.push({
+        rowId: r.id,
+        subject,
+        number: n,
+        stem: q.stem,
+        options: (r.option_order as string[]).map((id) => ({ id, text: texts.get(id) ?? "" })),
+        chosen: r.chosen_option ?? null,
+      });
+    }
+  }
 
   return (
     <Runner
-      key={row.id}
-      rowId={row.id}
-      position={row.position}
-      total={total ?? 0}
-      subject={subjectLabel(row.subject)}
-      stem={q.stem}
-      options={options}
+      items={items}
+      subjects={order.map((s: string) => ({ key: s, label: subjectLabel(s) }))}
       deadline={session.deadline}
       serverNow={new Date().toISOString()}
-      servedAt={servedAt}
+      candidate={profile.display_name}
     />
   );
 }

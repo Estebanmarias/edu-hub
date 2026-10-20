@@ -2,12 +2,17 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
+import Mascot from "@/components/mascot/Mascot";
+import { useMascot } from "@/components/mascot/MascotProvider";
 import { startPractice, submitAnswer, type StudyQuestion } from "../../actions";
 
 type Feedback = { correct: boolean; correctOption: string; explanation: string | null };
 type Answered = { q: StudyQuestion; chosen: string; fb: Feedback };
 
 const LETTERS = ["A", "B", "C", "D", "E", "F"];
+const PRAISE = ["Correct!", "Nice one!", "You got it!", "Brilliant!", "Yes!"];
+const ENCOURAGE = ["Not quite. Read the reason below.", "Close! Check the explanation.", "That's how we learn. See why."];
+const pick = (list: string[]) => list[Math.floor(Math.random() * list.length)];
 
 export default function StudyRunner({
   subject,
@@ -20,6 +25,7 @@ export default function StudyRunner({
   topic: string;
   count: number;
 }) {
+  const { say } = useMascot();
   const [questions, setQuestions] = useState<StudyQuestion[] | null>(null);
   const [error, setError] = useState("");
   const [i, setI] = useState(0);
@@ -52,19 +58,20 @@ export default function StudyRunner({
 
   if (error) {
     return (
-      <Shell title={subjectName}>
-        <p className="mb-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">{error}</p>
-        <Link href="/study" className="text-blue-700 underline">
+      <div>
+        <p className="mb-4 rounded-xl bg-sun-300/50 p-4 text-sm">{error}</p>
+        <Link href="/study" className="font-semibold text-brand-700 underline">
           Back to study
         </Link>
-      </Shell>
+      </div>
     );
   }
   if (!questions) {
     return (
-      <Shell title={subjectName}>
-        <p className="text-gray-600">Getting your questions ready...</p>
-      </Shell>
+      <div className="flex flex-col items-center py-16 text-ink/70">
+        <Mascot mood="thinking" size={110} />
+        <p className="mt-3">Getting your questions ready...</p>
+      </div>
     );
   }
 
@@ -72,41 +79,48 @@ export default function StudyRunner({
   if (i >= questions.length) {
     const right = answered.filter((a) => a.fb.correct).length;
     const missed = answered.filter((a) => !a.fb.correct);
+    const pct = Math.round((right / questions.length) * 100);
     const textOf = (q: StudyQuestion, id: string) => q.options.find((o) => o.id === id)?.text ?? "";
     return (
-      <Shell title="Practice complete">
-        <div className="mb-6 rounded-2xl border border-gray-200 p-6 text-center">
-          <div className="text-5xl font-bold">
-            {right}
-            <span className="text-2xl text-gray-500"> / {questions.length}</span>
+      <div>
+        <section className="rounded-3xl bg-linear-to-br from-brand-500 to-brand-700 p-6 text-center text-white shadow-lg">
+          <div className="flex justify-center">
+            <Mascot mood={pct >= 70 ? "celebrate" : pct >= 50 ? "happy" : "thinking"} size={120} />
           </div>
-        </div>
+          <div className="mt-2 text-5xl font-extrabold">
+            {right}
+            <span className="text-2xl font-bold text-brand-100"> / {questions.length}</span>
+          </div>
+          <p className="mt-2 text-brand-50">
+            {pct >= 70 ? "Great practice!" : pct >= 50 ? "Good effort. Keep going!" : "Look at the ones below, then try again."}
+          </p>
+        </section>
 
         {missed.length > 0 && (
-          <div className="mb-6">
-            <h2 className="mb-3 font-semibold">Questions to look at again</h2>
+          <div className="mt-6">
+            <h2 className="mb-3 font-bold">Questions to look at again</h2>
             <ul className="space-y-3">
               {missed.map((m) => (
-                <li key={m.q.id} className="rounded-xl border border-gray-200 p-4 text-sm">
-                  <p className="mb-2 font-medium">{m.q.stem}</p>
-                  <p className="text-red-700">Your answer: {textOf(m.q, m.chosen)}</p>
-                  <p className="text-green-700">Correct answer: {textOf(m.q, m.fb.correctOption)}</p>
-                  {m.fb.explanation && <p className="mt-1 text-gray-600">{m.fb.explanation}</p>}
+                <li key={m.q.id} className="rounded-2xl border border-brand-200 bg-white p-4 text-sm shadow-sm">
+                  <p className="mb-2 font-semibold">{m.q.stem}</p>
+                  <p className="text-berry-600">Your answer: {textOf(m.q, m.chosen)}</p>
+                  <p className="font-medium text-green-700">Correct answer: {textOf(m.q, m.fb.correctOption)}</p>
+                  {m.fb.explanation && <p className="mt-1 text-ink/70">{m.fb.explanation}</p>}
                 </li>
               ))}
             </ul>
           </div>
         )}
 
-        <div className="flex gap-3">
-          <button onClick={load} className="rounded-lg bg-blue-600 px-5 py-2.5 font-medium text-white">
+        <div className="mt-6 flex gap-3">
+          <button onClick={load} className="rounded-xl bg-brand-600 px-5 py-3 font-bold text-white hover:bg-brand-700">
             Practise again
           </button>
-          <Link href="/study" className="rounded-lg border border-gray-300 px-5 py-2.5">
+          <Link href="/study" className="rounded-xl border-2 border-brand-200 bg-white px-5 py-3 font-bold">
             Other subjects
           </Link>
         </div>
-      </Shell>
+      </div>
     );
   }
 
@@ -122,6 +136,8 @@ export default function StudyRunner({
       }
       setFb(r);
       setAnswered((a) => [...a, { q, chosen: selected, fb: r }]);
+      if (r.correct) say(pick(PRAISE), "happy", 2200);
+      else say(pick(ENCOURAGE), "sad", 3500);
     });
   }
   function next() {
@@ -131,73 +147,79 @@ export default function StudyRunner({
   }
 
   return (
-    <Shell title={subjectName}>
-      <div className="mb-5 flex justify-between text-sm text-gray-600">
-        <span>{topic || "All topics"}</span>
-        <span>
-          Question {i + 1} of {questions.length}
+    <div>
+      <div className="mb-2 flex items-center justify-between text-sm">
+        <span className="font-semibold text-brand-700">
+          {subjectName}
+          <span className="font-normal text-ink/55"> · {topic || "All topics"}</span>
+        </span>
+        <span className="text-ink/60">
+          {i + 1} / {questions.length}
         </span>
       </div>
-
-      <p className="mb-5 text-lg font-medium">{q.stem}</p>
-
-      <div className="mb-5 space-y-2">
-        {q.options.map((o, idx) => {
-          let tone = selected === o.id ? "border-blue-600 bg-blue-50" : "border-gray-300";
-          if (fb) {
-            if (o.id === fb.correctOption) tone = "border-green-600 bg-green-50";
-            else if (o.id === selected) tone = "border-red-500 bg-red-50";
-            else tone = "border-gray-200 text-gray-500";
-          }
-          return (
-            <label key={o.id} className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 ${tone}`}>
-              <input
-                type="radio"
-                name="option"
-                value={o.id}
-                checked={selected === o.id}
-                disabled={!!fb}
-                onChange={() => setSelected(o.id)}
-                className="mt-1"
-              />
-              <span>
-                <span className="mr-2 font-mono text-gray-500">{LETTERS[idx]}</span>
-                {o.text}
-              </span>
-            </label>
-          );
-        })}
+      <div className="mb-5 h-2 overflow-hidden rounded-full bg-brand-100">
+        <div className="h-full rounded-full bg-brand-500 transition-all" style={{ width: `${(i / questions.length) * 100}%` }} />
       </div>
 
-      {fb && (
-        <div className={`mb-5 rounded-xl p-4 text-sm ${fb.correct ? "bg-green-50 text-green-900" : "bg-red-50 text-red-900"}`}>
-          <p className="font-semibold">{fb.correct ? "Correct!" : "Not quite."}</p>
-          {fb.explanation && <p className="mt-1">{fb.explanation}</p>}
+      <div className="rounded-2xl border border-brand-200 bg-white p-5 shadow-sm md:p-6">
+        <p className="mb-5 whitespace-pre-line text-lg font-semibold leading-relaxed">{q.stem}</p>
+
+        <div className="space-y-3">
+          {q.options.map((o, idx) => {
+            let tone = selected === o.id ? "border-brand-500 bg-brand-50" : "border-brand-100 bg-white hover:border-brand-300";
+            let badge = selected === o.id ? "bg-brand-500 text-white" : "bg-brand-100 text-brand-800";
+            if (fb) {
+              if (o.id === fb.correctOption) {
+                tone = "border-green-500 bg-green-50";
+                badge = "bg-green-500 text-white";
+              } else if (o.id === selected) {
+                tone = "border-berry-500 bg-berry-500/10";
+                badge = "bg-berry-500 text-white";
+              } else {
+                tone = "border-brand-100 bg-white text-ink/45";
+                badge = "bg-brand-100 text-ink/45";
+              }
+            }
+            return (
+              <button
+                key={o.id}
+                onClick={() => !fb && setSelected(o.id)}
+                disabled={!!fb}
+                aria-pressed={selected === o.id}
+                className={`flex w-full items-start gap-4 rounded-xl border-2 px-4 py-3 text-left transition ${tone}`}
+              >
+                <span className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold ${badge}`}>
+                  {LETTERS[idx]}
+                </span>
+                <span className="pt-1">{o.text}</span>
+              </button>
+            );
+          })}
         </div>
-      )}
 
-      {!fb ? (
-        <button
-          onClick={check}
-          disabled={!selected || pending}
-          className="rounded-lg bg-blue-600 px-6 py-2.5 font-medium text-white disabled:opacity-50"
-        >
-          {pending ? "Checking..." : "Check answer"}
-        </button>
-      ) : (
-        <button onClick={next} className="rounded-lg bg-blue-600 px-6 py-2.5 font-medium text-white">
-          {i + 1 === questions.length ? "See results" : "Next question"}
-        </button>
-      )}
-    </Shell>
-  );
-}
+        {fb && (
+          <div className={`mt-5 rounded-xl p-4 text-sm ${fb.correct ? "bg-green-50 text-green-900" : "bg-berry-500/10 text-ink"}`}>
+            <p className="font-bold">{fb.correct ? "Correct!" : "Not quite."}</p>
+            {fb.explanation && <p className="mt-1">{fb.explanation}</p>}
+          </div>
+        )}
 
-function Shell({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <main className="mx-auto max-w-2xl px-6 py-10">
-      <h1 className="mb-4 text-xl font-bold">{title}</h1>
-      {children}
-    </main>
+        <div className="mt-5">
+          {!fb ? (
+            <button
+              onClick={check}
+              disabled={!selected || pending}
+              className="rounded-xl bg-brand-600 px-6 py-3 font-bold text-white hover:bg-brand-700 disabled:opacity-50"
+            >
+              {pending ? "Checking..." : "Check answer"}
+            </button>
+          ) : (
+            <button onClick={next} className="rounded-xl bg-brand-600 px-6 py-3 font-bold text-white hover:bg-brand-700">
+              {i + 1 === questions.length ? "See results" : "Next question"}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }

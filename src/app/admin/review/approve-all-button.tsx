@@ -18,7 +18,11 @@ export default function ApproveAllButton({
       <button
         className="rounded-lg bg-green-700 px-3 py-1.5 text-white"
         onClick={(e) => {
-          if (!confirm(`Approve ALL ${total} waiting ${subject} ${level} questions? Only do this after checking a random sample.`))
+          if (
+            !confirm(
+              `Approve ALL ${total} waiting ${subject} ${level} questions? Only do this after checking a random sample.`
+            )
+          )
             e.preventDefault();
         }}
       >
